@@ -1,7 +1,7 @@
 package mapstructure_hooks
 
 import (
-	"fmt"
+	"encoding/json"
 	"net/url"
 	"reflect"
 	"strconv"
@@ -114,14 +114,33 @@ func StringToURLHookFunc() mapstructure.DecodeHookFunc {
 
 		url, err := url.Parse(data.(string))
 
-		fmt.Println(url)
-		fmt.Println(err)
-
 		if err != nil {
 			return nil, err
 		}
 
 		return *url, nil
+	}
+}
+
+func OptionHookFunc() mapstructure.DecodeHookFunc {
+	return func(f reflect.Type, t reflect.Type, data interface{}) (interface{}, error) {
+		if !strings.HasPrefix(t.String(), "mo.Option[") {
+			return data, nil
+		}
+
+		b, err := json.Marshal(data)
+
+		if err != nil {
+			return nil, err
+		}
+
+		var inst = reflect.New(t).Interface()
+
+		if err := json.Unmarshal(b, inst); err != nil {
+			return nil, err
+		}
+
+		return inst, nil
 	}
 }
 
@@ -131,5 +150,6 @@ func All() []mapstructure.DecodeHookFunc {
 		StringToNumericHookFunc(),
 		StringToStringSliceHookFunc(),
 		StringToURLHookFunc(),
+		OptionHookFunc(),
 	}
 }
